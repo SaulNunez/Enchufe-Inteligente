@@ -105,6 +105,8 @@ const char* enchufeDos = "Enchufe Dos";
 EasyButton relayToggle1(TOGGLE_RELAY_1);
 EasyButton relayToggle2(TOGGLE_RELAY_2);
 
+EasyButton setupModeButton(TRIGGER_SETUP_MODE);
+
 void setupWifi(){
   //Encender wifi
   WiFi.mode(WIFI_STA);
@@ -146,6 +148,7 @@ void normalOperationSetup(){
   digitalWrite(RELAY_ENCHUFE_2, LOW);
   relayToggle1.begin();
   relayToggle2.begin();
+  setupModeButton.begin();
 
   setupWifi();
 
@@ -200,6 +203,8 @@ if(!LittleFS.begin()){
   }
 }
 
+const int FIVE_SECONDS = 5 * 1000;
+
 void loop() {
   if(mode == justPlug){
     fauxmo.handle();
@@ -211,6 +216,13 @@ void loop() {
     if(relayToggle2.wasPressed()){
       relayState2 = !relayState2;
       fauxmo.setState(enchufeDos, relayState2, 255);
+    }
+
+    if(setupModeButton.pressedFor(FIVE_SECONDS)){
+      if(!LittleFS.remove("/wifi.conf")){
+        Serial.println("Something happened and network information could not be deleted!");
+      }
+      ESP.restart();
     }
   }
 }
