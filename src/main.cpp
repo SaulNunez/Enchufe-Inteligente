@@ -4,6 +4,7 @@
 #include <ESPAsyncWebServer.h>
 #include <fauxmoESP.h>
 #include "LittleFS.h"
+#include <EasyButton.h>
 
 AsyncWebServer server(80);
 
@@ -101,6 +102,9 @@ const char* enchufeDos = "Enchufe Dos";
   #define TOGGLE_RELAY_2 D7
 #endif
 
+EasyButton relayToggle1(TOGGLE_RELAY_1);
+EasyButton relayToggle2(TOGGLE_RELAY_2);
+
 void setupWifi(){
   //Encender wifi
   WiFi.mode(WIFI_STA);
@@ -130,6 +134,8 @@ void setupWifi(){
   Serial.println(WiFi.localIP());
 }
 
+bool relayState1 = false;
+bool relayState2 = false;
 
 void normalOperationSetup(){
   Serial.println("IoT mode");
@@ -138,6 +144,8 @@ void normalOperationSetup(){
   pinMode(RELAY_ENCHUFE_2, OUTPUT);
   digitalWrite(RELAY_ENCHUFE_1, LOW);
   digitalWrite(RELAY_ENCHUFE_2, LOW);
+  relayToggle1.begin();
+  relayToggle2.begin();
 
   setupWifi();
 
@@ -164,9 +172,11 @@ void normalOperationSetup(){
   fauxmo.onSetState([](unsigned char device_id, const char * device_name, bool state, unsigned char value) {
         Serial.printf("[MAIN] Device #%d (%s) state: %s value: %d\n", device_id, device_name, state ? "ON" : "OFF", value);
         if(strcmp(device_name,enchufeUno) == 0){
-          digitalWrite(RELAY_ENCHUFE_1, state? HIGH: LOW);
+          relayState1 = state? HIGH: LOW;
+          digitalWrite(RELAY_ENCHUFE_1, relayState1);
         } else if(strcmp(device_name, enchufeDos) == 0){
-          digitalWrite(RELAY_ENCHUFE_2, state? HIGH: LOW);
+          relayState2 = state? HIGH: LOW;
+          digitalWrite(RELAY_ENCHUFE_2, relayState2);
         }
     });
 }
@@ -193,7 +203,14 @@ if(!LittleFS.begin()){
 void loop() {
   if(mode == justPlug){
     fauxmo.handle();
-  } else if(mode == askWifiCredentials){
-    
+
+    if(relayToggle1.wasPressed()){
+      relayState1 = !relayState1;
+      fauxmo.setState(enchufeUno, relayState1, 255);
+    }
+    if(relayToggle2.wasPressed()){
+      relayState2 = !relayState2;
+      fauxmo.setState(enchufeDos, relayState2, 255);
+    }
   }
 }
